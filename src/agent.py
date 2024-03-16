@@ -119,7 +119,7 @@ class Agent:
         """
         self.env.reset()
         # Fix K, Keps
-        K = 100
+        K = 50
         Keps = int(K * eps)
         # Initialize theta
         theta = np.zeros(5)
@@ -128,26 +128,21 @@ class Agent:
         # Initialize covariance matrix
         sigma = 2 * np.eye(5)
         rewards_per_episode = [[] for i in range(10)]
-        for it in tqdm(range(300)):
+        for _ in tqdm(range(300)):
             rewards_per_theta = []
             for k in range(1, K + 1):
-                new_theta = np.random.multivariate_normal(self.theta, sigma)
-                cur_theta = self.theta
+                new_theta = np.random.multivariate_normal(theta, sigma)
                 self.set_theta(new_theta)
                 rewards = []
                 for episode_count in range(10):
                     rewards.append(self.run_episode())
                     rewards_per_episode[episode_count].append(rewards[-1])
                 rewards_per_theta.append([np.mean(rewards), new_theta])
-                if np.mean(rewards) > max_reward_so_far:
-                    max_reward_so_far = np.mean(rewards)
-                else:
-                    self.set_theta(cur_theta)
             rewards_per_theta.sort(key=lambda x: x[0], reverse=True)
             # Pick Keps best thetas
             best_thetas = [theta for _, theta in rewards_per_theta][:Keps]
             # Find the mean and covariance of the best thetas
-            mean_theta = np.mean([x[1] for x in best_thetas], axis=0)
+            mean_theta = np.mean([x for x in best_thetas], axis=0)
             temp = np.sum(
                 [
                     np.multiply(
@@ -158,6 +153,10 @@ class Agent:
                 ]
             )
             sigma = (1.0 / (eps + Keps)) * (eps * 2 * np.eye(5) + temp)
+            if np.mean(rewards) > max_reward_so_far:
+                max_reward_so_far = np.mean(rewards)
+                theta = mean_theta
+            theta = mean_theta
         mean_reward_per_episode = [np.mean(x) for x in rewards_per_episode]
         # PLot the mean rewards per episode
         plt.figure(figsize=(20, 6))
